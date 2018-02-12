@@ -3,7 +3,7 @@ package store
 import (
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/golang/glog"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -52,30 +52,30 @@ func (ks *KStore) setPodsStore() {
 
 func (ks *KStore) addPodToCache(obj interface{}) {
 	if addPods, ok := obj.(*v1.Pod); ok {
-		logrus.Infof("received add pods: %v", addPods)
+		glog.V(3).Infof("received add pods: %v", addPods)
 	}
 }
 
 func (ks *KStore) updatePodToCache(oldObj, newObj interface{}) {
 	oldPods, ok := oldObj.(*v1.Pod)
 	if ok {
-		logrus.Infof("received old pods: %v", oldPods)
+		glog.V(3).Infof("received old pods: %v", oldPods)
 	}
 
 	newPods, ok := newObj.(*v1.Pod)
 	if ok {
-		logrus.Infof("received new pods: %v", newPods)
+		glog.V(3).Infof("received new pods: %v", newPods)
 	}
 }
 
 func (ks *KStore) deletePodToCache(obj interface{}) {
 	if delPods, ok := obj.(*v1.Pod); ok {
-		logrus.Infof("deleted pods: %v", delPods)
+		glog.V(3).Infof("deleted pods: %v", delPods)
 	}
 }
 
 func (ks *KStore) Start() {
-	logrus.Info("Starting podsController...")
+	glog.V(3).Info("Starting podsController...")
 	go ks.podsController.Run(wait.NeverStop)
 
 	ks.waitForResourceSyncedOrDie()
@@ -98,10 +98,10 @@ func (ks *KStore) waitForResourceSyncedOrDie() {
 			panic("Timeout waiting for initialization")
 		case <-ticker.C:
 			if ks.podsController.HasSynced() {
-				logrus.Info("Initialized pods from apiserver...")
+				glog.V(3).Info("Initialized pods from apiserver...")
 				return
 			}
-			logrus.Info("Waiting for pods to be initialized from apiserver...")
+			glog.V(3).Info("Waiting for pods to be initialized from apiserver...")
 		}
 	}
 }
