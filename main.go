@@ -1,29 +1,9 @@
 package main
 
 import (
-	"flag"
-
-	"github.com/Colstuwjx/kstore/store"
-
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
+	kstore_cmd "github.com/Colstuwjx/kstore/cmd/kstore"
 )
 
 func main() {
-	apiTarget := flag.String("cluster", "127.0.0.1:8080", "cluster target, like: 127.0.0.1:8080")
-	configPath := flag.String("config", "/etc/kubernetes/kubeconfig", "kube config file path")
-	flag.Parse()
-
-	config, err := clientcmd.BuildConfigFromFlags(*apiTarget, *configPath)
-	if err != nil {
-		panic(err)
-	}
-
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		panic(err)
-	}
-
-	ks := store.New(clientset)
-	ks.Start()
+	kstore_cmd.Execute()
 }
