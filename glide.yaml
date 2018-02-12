@@ -1,0 +1,15 @@
+package: github.com/Colstuwjx/kstore
+import:
+- package: github.com/golang/glog
+- package: k8s.io/apimachinery
+  subpackages:
+  - pkg/fields
+  - pkg/util/wait
+- package: k8s.io/client-go
+  subpackages:
+  - kubernetes
+  - tools/cache
+  - tools/clientcmd
+- package: k8s.io/api
+  subpackages:
+  - core/v1
