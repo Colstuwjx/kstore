@@ -9,16 +9,21 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientset "k8s.io/client-go/kubernetes"
 	kcache "k8s.io/client-go/tools/cache"
+
+	"github.com/Colstuwjx/kstore/pkg/cache"
 )
 
 var (
 	// Resync period for the kube controller loop.
 	resyncPeriod = 5 * time.Second
-
-	timeout = 5 * time.Second
+	timeout      = 5 * time.Second
+	expireTtl    = 60 * 24 * time.Hour
 )
 
 type KStore struct {
+	// local cache
+	localCache *cache.LocalCache
+
 	kubeClient clientset.Interface
 
 	// Initial timeout for endpoints and services to be synced from APIServer
@@ -51,39 +56,60 @@ func (ks *KStore) setPodsStore() {
 }
 
 func (ks *KStore) addPodToCache(obj interface{}) {
-	if addPods, ok := obj.(*v1.Pod); ok {
-		glog.V(3).Infof("received add pods: %v", addPods)
+	if addPod, ok := obj.(*v1.Pod); ok {
+		err := ks.localCache.Add(addPod.Name, addPod)
+		if err != nil {
+			glog.Errorf("add pod err: %s", err)
+			return
+		}
+	} else {
+		glog.Error("received obj not pod type!")
 	}
 }
 
 func (ks *KStore) updatePodToCache(oldObj, newObj interface{}) {
-	oldPods, ok := oldObj.(*v1.Pod)
-	if ok {
-		glog.V(3).Infof("received old pods: %v", oldPods)
+	oldPod, ok := oldObj.(*v1.Pod)
+	if !ok {
+		glog.Error("received oldObj not pod type!")
+		return
 	}
 
-	newPods, ok := newObj.(*v1.Pod)
-	if ok {
-		glog.V(3).Infof("received new pods: %v", newPods)
+	newPod, ok := newObj.(*v1.Pod)
+	if !ok {
+		glog.Error("received newObj not pod type!")
+		return
+	}
+
+	if oldPod.Name != newPod.Name {
+		glog.Error("received oldObj, newObj with inconsistent name!")
+		return
+	}
+
+	err := ks.localCache.Update(newPod.Name, oldPod, newPod)
+	if err != nil {
+		glog.Error("update pod err: %s", err)
 	}
 }
 
-func (ks *KStore) deletePodToCache(obj interface{}) {
-	if delPods, ok := obj.(*v1.Pod); ok {
-		glog.V(3).Infof("deleted pods: %v", delPods)
+func (ks *KStore) deletePodToCache(delObj interface{}) {
+	if delPod, ok := delObj.(*v1.Pod); ok {
+		err := ks.localCache.Delete(delPod.Name, delPod)
+		if err != nil {
+			glog.Error("delete pod err: %s", err)
+			return
+		}
+	} else {
+		glog.Error("received delObj not pod type!")
 	}
 }
 
 func (ks *KStore) Start() {
-	glog.V(3).Info("Starting podsController...")
+	glog.Info("Starting podsController...")
 	go ks.podsController.Run(wait.NeverStop)
 
 	ks.waitForResourceSyncedOrDie()
 
-	// TODO: offer http api to get/set cache.
-	for {
-		time.Sleep(1 * time.Second)
-	}
+	// TODO: offer http api to get/set cache, now we just return.
 }
 
 func (ks *KStore) waitForResourceSyncedOrDie() {
@@ -98,10 +124,10 @@ func (ks *KStore) waitForResourceSyncedOrDie() {
 			panic("Timeout waiting for initialization")
 		case <-ticker.C:
 			if ks.podsController.HasSynced() {
-				glog.V(3).Info("Initialized pods from apiserver...")
+				glog.Info("Initialized pods from apiserver...")
 				return
 			}
-			glog.V(3).Info("Waiting for pods to be initialized from apiserver...")
+			glog.Info("Waiting for pods to be initialized from apiserver...")
 		}
 	}
 }
@@ -112,6 +138,7 @@ func New(client clientset.Interface) *KStore {
 		initialSyncTimeout: timeout,
 	}
 
+	ks.localCache = cache.NewLocalCache(expireTtl)
 	ks.setPodsStore()
 	return ks
 }
