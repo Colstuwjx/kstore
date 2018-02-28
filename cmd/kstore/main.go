@@ -2,6 +2,7 @@ package kstore
 
 import (
 	"flag"
+	"time"
 
 	"github.com/Colstuwjx/kstore/pkg/store"
 
@@ -26,4 +27,8 @@ func Execute() {
 
 	ks := store.New(clientset)
 	ks.Start()
+
+	for {
+		time.Sleep(10 * time.Second)
+	}
 }
