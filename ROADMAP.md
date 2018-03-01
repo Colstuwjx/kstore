@@ -7,7 +7,8 @@
 - [x] Support soft delete (so we can review the pod schedule history;
 - [x] ONLY support POD watch right now;
 - [ ] Basic CURD operations;
-- [ ] Indexing
+- [ ] Indexing;
+- [ ] Simply import & export tool
 
 ## step 2
 
