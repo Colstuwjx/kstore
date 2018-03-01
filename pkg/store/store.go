@@ -6,7 +6,6 @@ import (
 	"github.com/golang/glog"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/util/wait"
 	clientset "k8s.io/client-go/kubernetes"
 	kcache "k8s.io/client-go/tools/cache"
 
@@ -25,6 +24,9 @@ type KStore struct {
 	localCache *cache.LocalCache
 
 	kubeClient clientset.Interface
+
+	// stop chan with stop watching and graceful exit
+	stopChan chan struct{}
 
 	// Initial timeout for endpoints and services to be synced from APIServer
 	initialSyncTimeout time.Duration
@@ -105,11 +107,16 @@ func (ks *KStore) deletePodToCache(delObj interface{}) {
 
 func (ks *KStore) Start() {
 	glog.Info("Starting podsController...")
-	go ks.podsController.Run(wait.NeverStop)
+	go ks.podsController.Run(ks.stopChan)
 
 	ks.waitForResourceSyncedOrDie()
 
 	// TODO: offer http api to get/set cache, now we just return.
+}
+
+func (ks *KStore) Stop() {
+	ks.stopChan <- struct{}{}
+	glog.Info("kstore listwatch stopped...")
 }
 
 func (ks *KStore) waitForResourceSyncedOrDie() {
@@ -125,6 +132,7 @@ func (ks *KStore) waitForResourceSyncedOrDie() {
 		case <-ticker.C:
 			if ks.podsController.HasSynced() {
 				glog.Info("Initialized pods from apiserver...")
+
 				return
 			}
 			glog.Info("Waiting for pods to be initialized from apiserver...")
@@ -136,6 +144,7 @@ func New(client clientset.Interface) *KStore {
 	ks := &KStore{
 		kubeClient:         client,
 		initialSyncTimeout: timeout,
+		stopChan:           make(chan struct{}),
 	}
 
 	ks.localCache = cache.NewLocalCache(expireTtl)

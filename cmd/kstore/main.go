@@ -29,6 +29,9 @@ func Execute() {
 	ks.Start()
 
 	for {
-		time.Sleep(10 * time.Second)
+		time.Sleep(30 * time.Second)
+
+		// test: try to stop ks listwatch.
+		ks.Stop()
 	}
 }
