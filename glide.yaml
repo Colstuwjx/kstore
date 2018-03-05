@@ -1,6 +1,8 @@
 package: github.com/Colstuwjx/kstore
 import:
 - package: github.com/golang/glog
+- package: github.com/hashicorp/raft
+- package: github.com/hashicorp/raft-boltdb
 - package: k8s.io/apimachinery
   subpackages:
   - pkg/fields
