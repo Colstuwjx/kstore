@@ -1,8 +1,17 @@
 # kstore
 
-kstore is a simple collector which do list watch with k8s objects and maintain local cache.
+kstore is a simple collector which do list watch with k8s objects and maintain local cache, we can use kstore to track schedule history, and do some statistics, monitoring job on it.
 
-## run
+Tips: kstore is still in early and heavily development version, any break or uncompatible changes would happen.
+
+## design
+
+kstore implemented local cache to maintain k8s object data(currently ONLY pod), and build index for them.
+we could filter pods by deleted/non-deleted, or POD ip, node name, even time range in the future.
+
+## Usage
+
+we need to build the kstore bundle, and ensure at least 3 nodes running at one cluster.
 
 ```
 $ go build
