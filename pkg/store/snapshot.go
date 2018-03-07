@@ -8,7 +8,7 @@ import (
 )
 
 type fsmSnapshot struct {
-	store map[string]map[string]*(cache.ObjectDef)
+	store map[string]*(cache.ObjectDef)
 }
 
 func (f *fsmSnapshot) Persist(sink raft.SnapshotSink) error {
