@@ -27,7 +27,8 @@ import (
 const (
 	// Resync period for the kube controller loop.
 	resyncPeriod = 5 * time.Second
-	timeout      = 5 * time.Second
+	timeout      = 30 * time.Second
+	outOfDateTtl = 300 * time.Second
 	expireTtl    = 60 * 24 * time.Hour
 
 	// raft configurations.
@@ -263,7 +264,7 @@ func (ks *KStore) waitForResourceSyncedOrDie() {
 	}
 }
 
-func (ks *KStore) Reset(data *map[string]map[string]*cache.ObjectDef) error {
+func (ks *KStore) Reset(data *map[string]*cache.ObjectDef) error {
 	return ks.localCache.Reset(data)
 }
 
@@ -392,7 +393,42 @@ func New(client clientset.Interface, httpBind, raftBind, raftDir, join string) *
 		JoinAddr:           join,
 	}
 
-	ks.localCache = cache.NewLocalCache(expireTtl)
+	indexers := cache.Indexers{}
+	indices := cache.Indices{}
+	ks.localCache = cache.NewLocalCache(indexers, indices, outOfDateTtl, expireTtl)
+	err := ks.localCache.Init()
+	if err != nil {
+		panic(err)
+	}
+
+	// initial indexers
+	newIndexers := make(map[string]cache.IndexFunc)
+	indexMethods := map[string][]string{
+		"podIP": []string{
+			"status.podIP", "",
+		},
+		"nodeName": []string{
+			"spec.nodeName", "",
+		},
+		"namespace": []string{
+			"metadata.namespace", "",
+		},
+		"env.appId": []string{
+			"spec.containers.env", "APP_ID",
+		},
+	}
+
+	// initial indexFunc via index func factory
+	for name, field := range indexMethods {
+		indexFunc := PodObjectIndexFuncFactory(field[0], field[1])
+		newIndexers[name] = indexFunc
+	}
+
+	err = ks.localCache.AddIndexers(newIndexers)
+	if err != nil {
+		panic(err)
+	}
+
 	ks.setPodsStore()
 	return ks
 }

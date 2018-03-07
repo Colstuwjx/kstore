@@ -40,7 +40,7 @@ func (f *fsm) Snapshot() (raft.FSMSnapshot, error) {
 
 // Restore stores the kstore to a previous state.
 func (f *fsm) Restore(rc io.ReadCloser) error {
-	o := make(map[string]map[string]*cache.ObjectDef)
+	o := make(map[string]*cache.ObjectDef)
 	if err := json.NewDecoder(rc).Decode(&o); err != nil {
 		return err
 	}
@@ -51,7 +51,7 @@ func (f *fsm) Restore(rc io.ReadCloser) error {
 }
 
 func (f *fsm) applyAdd(objectName, objectType string, newObj interface{}) interface{} {
-	err := f.localCache.Add(objectName, objectType, newObj)
+	err := f.localCache.Add(objectName, objectType, newObj, false)
 	if err != nil {
 		glog.Errorf("add %s %s err: %s", objectType, objectName, err)
 		return nil
@@ -61,7 +61,7 @@ func (f *fsm) applyAdd(objectName, objectType string, newObj interface{}) interf
 }
 
 func (f *fsm) applyUpdate(objectName, objectType string, oldObj, newObj interface{}) interface{} {
-	err := f.localCache.Update(objectName, objectType, oldObj, newObj)
+	err := f.localCache.Update(objectName, objectType, oldObj, newObj, false)
 	if err != nil {
 		glog.Errorf("update %s %s err: %s", objectType, objectName, err)
 		return nil
@@ -71,7 +71,7 @@ func (f *fsm) applyUpdate(objectName, objectType string, oldObj, newObj interfac
 }
 
 func (f *fsm) applyDelete(objectName, objectType string, oldObj interface{}) interface{} {
-	err := f.localCache.Delete(objectName, objectType, oldObj)
+	err := f.localCache.Delete(objectName, objectType, oldObj, false)
 	if err != nil {
 		glog.Errorf("delete %s %s err: %s", objectType, objectName, err)
 		return nil

@@ -5,5 +5,14 @@ package store
 */
 
 func (ks *KStore) GetCacheAsJson() (string, error) {
-	return ks.localCache.Serialize()
+	return ks.localCache.SerializedData()
+}
+
+func (ks *KStore) GetCacheByIndex(indexName, indexKey string) (string, error) {
+	objects, err := ks.localCache.ByIndex(indexName, indexKey)
+	if err != nil {
+		return "", err
+	}
+
+	return ks.localCache.Serialize(objects)
 }

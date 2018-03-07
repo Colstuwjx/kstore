@@ -13,8 +13,27 @@ type reqJoin struct {
 
 // setHandlers initialize http handlers
 func (ks *KStore) setHttpHandlers() {
+	// TODO: implement time range query API for specified field(indexed).
 	http.HandleFunc("/pods/all", func(w http.ResponseWriter, req *http.Request) {
 		serializedJSON, err := ks.GetCacheAsJson()
+		if err == nil {
+			fmt.Fprint(w, serializedJSON)
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, err)
+		}
+	})
+
+	http.HandleFunc("/pods/indexed", func(w http.ResponseWriter, req *http.Request) {
+		indexName := req.URL.Query().Get("index_name")
+		indexKey := req.URL.Query().Get("index_key")
+
+		if indexName == "" || indexKey == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		serializedJSON, err := ks.GetCacheByIndex(indexName, indexKey)
 		if err == nil {
 			fmt.Fprint(w, serializedJSON)
 		} else {
