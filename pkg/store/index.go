@@ -12,8 +12,8 @@ import (
 
 const (
 	DeleteCategory = "delete"
-	Deleted        = "deleted"
-	NonDeleted     = "non_deleted"
+	Deleted        = "true"
+	NonDeleted     = "false"
 )
 
 // make a factory to produce indexFunc for those regular field category, such as meta, spec, status etc.

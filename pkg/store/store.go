@@ -404,6 +404,7 @@ func New(client clientset.Interface, httpBind, raftBind, raftDir, join string) *
 	// initial indexers
 	newIndexers := make(map[string]cache.IndexFunc)
 	indexMethods := map[string][]string{
+		"deleted": []string{"delete", ""},
 		"podIP": []string{
 			"status.podIP", "",
 		},

@@ -28,6 +28,9 @@ type Indexer interface {
 	// ByIndex lists object that match on the named indexing function with the exact key
 	ByIndex(indexName, indexKey string) ([]interface{}, error)
 
+	// ByMultipleIndex lists object that match on named list indexing function with the exact key
+	ByMultipleIndex(indexKV map[string][]string) ([]interface{}, error)
+
 	// GetIndexer return the indexers
 	GetIndexers() Indexers
 

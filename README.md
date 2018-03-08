@@ -17,7 +17,7 @@ we need to build the kstore bundle, and ensure at least 3 nodes running at one c
 $ go build
 
 # single node cluster
-$ ./kstore -single -cluster "127.0.0.1:8080" -config "./kubeconfig" -v 3 -alsologtostderr=true
+$ ./kstore -single -id node-0 -rdir "/tmp/raftdb/node-0" -raddr ":12000" -haddr ":11888" -cluster "127.0.0.1:8080" -config "./kubeconfig" -v 5 -alsologtostderr=true
 
 # multiple node cluster
 # node-0

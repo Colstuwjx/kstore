@@ -173,6 +173,7 @@ func (lc *LocalCache) Update(objectName, objectType string, oldObjectBody, newOb
 		object := &ObjectDef{
 			Body:            newObjectBody,
 			Type:            objectType,
+			Deleted:         false,
 			CreatedUnixTime: time.Now().Unix(), // FIXME: using object timestamp.
 			UpdatedUnixTime: time.Now().Unix(),
 		}
@@ -289,6 +290,39 @@ func (lc *LocalCache) ByIndex(indexName, indexKey string) ([]interface{}, error)
 	set := index[indexKey]
 	list := make([]interface{}, 0, set.Len())
 	for _, key := range set.List() {
+		list = append(list, lc.data[key])
+	}
+
+	return list, nil
+}
+
+// ByMultipleIndex returns a list of items that both match the value for the index functions
+func (lc *LocalCache) ByMultipleIndex(indexKV map[string][]string) ([]interface{}, error) {
+	lc.localLock.RLock()
+	defer lc.localLock.RUnlock()
+
+	matchSet := sets.String{}
+	for indexName, indexKeys := range indexKV {
+		set := sets.String{}
+		indexFunc := lc.indexers[indexName]
+		if indexFunc == nil {
+			continue
+		}
+
+		index := lc.indices[indexName]
+		for _, indexKey := range indexKeys {
+			set = set.Union(index[indexKey])
+		}
+
+		if matchSet.Len() == 0 {
+			matchSet = set
+		} else {
+			matchSet = matchSet.Intersection(set)
+		}
+	}
+
+	list := make([]interface{}, 0, matchSet.Len())
+	for _, key := range matchSet.List() {
 		list = append(list, lc.data[key])
 	}
 

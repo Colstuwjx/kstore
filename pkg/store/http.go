@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 )
 
 type reqJoin struct {
@@ -24,16 +25,36 @@ func (ks *KStore) setHttpHandlers() {
 		}
 	})
 
-	http.HandleFunc("/pods/indexed", func(w http.ResponseWriter, req *http.Request) {
+	http.HandleFunc("/indexes", func(w http.ResponseWriter, req *http.Request) {
 		indexName := req.URL.Query().Get("index_name")
-		indexKey := req.URL.Query().Get("index_key")
-
-		if indexName == "" || indexKey == "" {
+		if indexName == "" {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		serializedJSON, err := ks.GetCacheByIndex(indexName, indexKey)
+		indices, err := ks.GetIndiceByName(indexName)
+		if err == nil {
+			fmt.Fprint(w, indices)
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, err)
+		}
+	})
+
+	http.HandleFunc("/pods/indexed", func(w http.ResponseWriter, req *http.Request) {
+		indexValues, err := url.ParseQuery(req.URL.RawQuery)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, err)
+			return
+		}
+
+		if len(indexValues) == 0 {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		serializedJSON, err := ks.GetCacheByMultipleIndex(indexValues)
 		if err == nil {
 			fmt.Fprint(w, serializedJSON)
 		} else {
