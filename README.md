@@ -30,4 +30,10 @@ $ ./kstore -id node-1 -join "127.0.0.1:11888" -rdir "/tmp/raftdb/node-1" -raddr 
 
 # node-2
 $ ./kstore -id node-2 -join "127.0.0.1:11888" -rdir "/tmp/raftdb/node-2" -raddr ":12002" -haddr ":11890" -cluster "127.0.0.1:8080" -config "./kubeconfig" -v 5 -alsologtostderr=true
+
+# with specified index
+$ ./kstore -single -id node-0 -rdir "/tmp/raftdb/node-0" -raddr ":12000" -haddr ":11888" -cluster "127.0.0.1:8080" -config "./kubeconfig" -v 5 -alsologtostderr=true -indexes deployName,metadata.labels,DEPLOYMENT_ID
+
+# with sync timeout configured
+$ ./kstore -single -id node-0 -rdir "/tmp/raftdb/node-0" -raddr ":12000" -haddr ":11888" -cluster "127.0.0.1:8080" -config "./kubeconfig" -v 5 -alsologtostderr=true -sync.timeout 180
 ```

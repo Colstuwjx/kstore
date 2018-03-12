@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/hashicorp/raft-boltdb"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/util/sets"
 	clientset "k8s.io/client-go/kubernetes"
 	kcache "k8s.io/client-go/tools/cache"
 
@@ -27,9 +29,8 @@ import (
 const (
 	// Resync period for the kube controller loop.
 	resyncPeriod = 5 * time.Second
-	timeout      = 30 * time.Second
 	outOfDateTtl = 300 * time.Second
-	expireTtl    = 60 * 24 * time.Hour
+	expireTtl    = 7 * 24 * time.Hour
 
 	// raft configurations.
 	retainSnapshotCount   = 2
@@ -382,10 +383,10 @@ func (ks *KStore) Join(nodeID, addr string) error {
 	return nil
 }
 
-func New(client clientset.Interface, httpBind, raftBind, raftDir, join string) *KStore {
+func New(client clientset.Interface, httpBind, raftBind, raftDir, join string, syncTimeout int, indexes sets.String) *KStore {
 	ks := &KStore{
 		kubeClient:         client,
-		initialSyncTimeout: timeout,
+		initialSyncTimeout: time.Duration(syncTimeout) * time.Second,
 		stopChan:           make(chan struct{}),
 		RaftBind:           raftBind,
 		RaftDir:            raftDir,
@@ -403,26 +404,29 @@ func New(client clientset.Interface, httpBind, raftBind, raftDir, join string) *
 
 	// initial indexers
 	newIndexers := make(map[string]cache.IndexFunc)
-	indexMethods := map[string][]string{
-		"deleted": []string{"delete", ""},
-		"podIP": []string{
-			"status.podIP", "",
-		},
-		"nodeName": []string{
-			"spec.nodeName", "",
-		},
-		"namespace": []string{
-			"metadata.namespace", "",
-		},
-		"env.appId": []string{
-			"spec.containers.env", "APP_ID",
-		},
-	}
+	idxList := indexes.List()
+	for _, idx := range idxList {
+		var indexMethodName, indexCategory, indexName string
 
-	// initial indexFunc via index func factory
-	for name, field := range indexMethods {
-		indexFunc := PodObjectIndexFuncFactory(field[0], field[1])
-		newIndexers[name] = indexFunc
+		indexPair := strings.Split(idx, ",")
+		if len(indexPair) != 2 && len(indexPair) != 3 {
+			invalidIndexPairErr := fmt.Errorf("invalid index: %s", idx)
+			panic(invalidIndexPairErr)
+		} else {
+			indexMethodName = indexPair[0]
+			indexCategory = indexPair[1]
+
+			if len(indexPair) == 3 {
+				indexName = indexPair[2]
+			}
+		}
+
+		indexFunc := PodObjectIndexFuncFactory(indexCategory, indexName)
+		if indexFunc == nil {
+			noIndexFuncErr := fmt.Errorf("no indexFunc for %s.%s found", indexCategory, indexName)
+			panic(noIndexFuncErr)
+		}
+		newIndexers[indexMethodName] = indexFunc
 	}
 
 	err = ks.localCache.AddIndexers(newIndexers)
