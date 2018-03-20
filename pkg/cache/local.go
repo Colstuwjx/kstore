@@ -288,6 +288,10 @@ func (lc *LocalCache) ByIndex(indexName, indexKey string) ([]interface{}, error)
 
 	index := lc.indices[indexName]
 	set := index[indexKey]
+	if len(set) == 0 {
+		return nil, fmt.Errorf("bad indexed name %s with key %v", indexName, indexKey)
+	}
+
 	list := make([]interface{}, 0, set.Len())
 	for _, key := range set.List() {
 		list = append(list, lc.data[key])
@@ -311,7 +315,17 @@ func (lc *LocalCache) ByMultipleIndex(indexKV map[string][]string) ([]interface{
 
 		index := lc.indices[indexName]
 		for _, indexKey := range indexKeys {
+			if len(index[indexKey]) == 0 {
+				continue
+			}
+
 			set = set.Union(index[indexKey])
+		}
+
+		// found base indexed case
+		// force return nil
+		if len(set) == 0 {
+			return nil, fmt.Errorf("bad indexed name %s with keys %v", indexName, indexKeys)
 		}
 
 		if matchSet.Len() == 0 {
